@@ -235,11 +235,11 @@ html, body {
 }
 
 @media print {
-  body { background:#fff !important; }
-  .particles, .editor, .action-bar, .theme-selector, .logo-row, .hint-txt { display:none !important; }
-  .page { padding:0; display:block; }
-  .card-wrap { page-break-after:always; margin:0 auto 20px; position:relative !important; }
-  .c-front, .c-back { position:relative !important; opacity:1 !important; transform:none !important; display:flex !important; margin-bottom:20px; }
+  * { -webkit-print-color-adjust:exact !important; print-color-adjust:exact !important; }
+  body { background:#fff !important; margin:0; padding:0; }
+  .particles, .editor, .action-bar, .theme-selector, .logo-row, .hint-txt, .card-wrap { display:none !important; }
+  #printArea { display:flex !important; flex-direction:row; gap:8mm; justify-content:center; align-items:flex-start; padding:10mm; }
+  .print-card { display:flex !important; flex-direction:column; width:75mm; height:122mm; border-radius:8px; overflow:hidden; }
 }
 </style>
 </head>
@@ -478,53 +478,85 @@ document.querySelectorAll('input[type=range]').forEach(function(r){
 
 // ══ DOWNLOAD PNG ══
 function downloadCard(){
-  var btn=event.target;
+  var btn=event.currentTarget || event.target;
   btn.textContent='⏳ Генерирую...';
-  btn.style.opacity='0.6';
-  
+  btn.disabled=true;
+
+  var front=document.getElementById('cFront');
+  var back=document.getElementById('cBack');
+
+  // Temporarily make both visible for capture
+  var origFrontStyle=front.style.cssText;
+  var origBackStyle=back.style.cssText;
+  front.style.cssText='position:absolute;inset:0;opacity:1;transform:none;z-index:2;display:flex;';
+  back.style.cssText='position:absolute;inset:0;opacity:1;transform:none;z-index:2;display:flex;pointer-events:none;';
+
   // Capture front
-  var wasFlipped=flipped;
-  if(wasFlipped) flipCard();
-  
-  setTimeout(function(){
-    html2canvas(document.getElementById('cFront'),{scale:2,backgroundColor:'#ffffff'}).then(function(canvas){
-      canvas.toBlob(function(blob){
-        var url=URL.createObjectURL(blob);
-        var a=document.createElement('a');
-        a.href=url;
-        a.download='latif-card-front.png';
-        a.click();
-        URL.revokeObjectURL(url);
-        
-        // Flip and capture back
-        if(!flipped) flipCard();
-        setTimeout(function(){
-          html2canvas(document.getElementById('cBack'),{scale:2,backgroundColor:null}).then(function(canvas2){
-            canvas2.toBlob(function(blob2){
-              var url2=URL.createObjectURL(blob2);
-              var a2=document.createElement('a');
-              a2.href=url2;
-              a2.download='latif-card-back.png';
-              a2.click();
-              URL.revokeObjectURL(url2);
-              
-              if(!wasFlipped) flipCard();
-              btn.textContent='✅ Скачано!';
-              setTimeout(function(){
-                btn.textContent='📸 Скачать PNG';
-                btn.style.opacity='1';
-              },2000);
-            });
-          });
-        },800);
-      });
+  html2canvas(front,{
+    scale:3,
+    backgroundColor:'#ffffff',
+    useCORS:true,
+    logging:false
+  }).then(function(c1){
+    var a1=document.createElement('a');
+    a1.href=c1.toDataURL('image/png');
+    a1.download='latif-'+document.getElementById('d-first').textContent.toLowerCase()+'-front.png';
+    a1.click();
+
+    // Capture back
+    return html2canvas(back,{
+      scale:3,
+      backgroundColor:'#0d2560',
+      useCORS:true,
+      logging:false
     });
-  },200);
+  }).then(function(c2){
+    var a2=document.createElement('a');
+    a2.href=c2.toDataURL('image/png');
+    a2.download='latif-'+document.getElementById('d-first').textContent.toLowerCase()+'-back.png';
+    a2.click();
+
+    // Restore original styles
+    front.style.cssText=origFrontStyle;
+    back.style.cssText=origBackStyle;
+    btn.textContent='✅ Скачано!';
+    setTimeout(function(){
+      btn.textContent='📸 Скачать PNG';
+      btn.disabled=false;
+    },2000);
+  }).catch(function(err){
+    front.style.cssText=origFrontStyle;
+    back.style.cssText=origBackStyle;
+    btn.textContent='📸 Скачать PNG';
+    btn.disabled=false;
+    alert('Ошибка: '+err.message);
+  });
 }
 
 // ══ PRINT ══
 function printCard(){
-  window.print();
+  // Create print window with both sides
+  var front=document.getElementById('cFront').outerHTML;
+  var back=document.getElementById('cBack').outerHTML;
+  var theme=document.getElementById('cardWrap').className;
+  var styles=document.querySelector('style').innerHTML;
+  
+  var w=window.open('','_blank');
+  w.document.write('<html><head><meta charset="UTF-8">'+
+    '<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Oswald:wght@400;600;700&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">'+
+    '<style>'+styles+
+    'body{background:#fff;margin:0;padding:10mm;}'+
+    '.print-wrap{display:flex;gap:8mm;justify-content:center;flex-wrap:wrap;}'+
+    '.card-box{width:75mm;height:122mm;position:relative;border-radius:12px;overflow:hidden;flex-shrink:0;}'+
+    '.c-front,.c-back{position:relative!important;opacity:1!important;transform:none!important;display:flex!important;width:75mm;height:122mm;}'+
+    '@media print{*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;}}'+
+    '</style></head><body>'+
+    '<div class="print-wrap '+theme+'">'+
+    '<div class="card-box">'+front+'</div>'+
+    '<div class="card-box">'+back+'</div>'+
+    '</div></body></html>');
+  w.document.close();
+  setTimeout(function(){ w.print(); },800);
 }
 </script>
 </body>
