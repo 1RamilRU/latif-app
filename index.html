@@ -535,28 +535,22 @@ function downloadCard(){
 
 // ══ PRINT ══
 function printCard(){
-  // Create print window with both sides
-  var front=document.getElementById('cFront').outerHTML;
-  var back=document.getElementById('cBack').outerHTML;
-  var theme=document.getElementById('cardWrap').className;
-  var styles=document.querySelector('style').innerHTML;
-  
-  var w=window.open('','_blank');
-  w.document.write('<html><head><meta charset="UTF-8">'+
-    '<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Oswald:wght@400;600;700&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">'+
-    '<style>'+styles+
-    'body{background:#fff;margin:0;padding:10mm;}'+
-    '.print-wrap{display:flex;gap:8mm;justify-content:center;flex-wrap:wrap;}'+
-    '.card-box{width:75mm;height:122mm;position:relative;border-radius:12px;overflow:hidden;flex-shrink:0;}'+
-    '.c-front,.c-back{position:relative!important;opacity:1!important;transform:none!important;display:flex!important;width:75mm;height:122mm;}'+
-    '@media print{*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;}}'+
-    '</style></head><body>'+
-    '<div class="print-wrap '+theme+'">'+
-    '<div class="card-box">'+front+'</div>'+
-    '<div class="card-box">'+back+'</div>'+
-    '</div></body></html>');
-  w.document.close();
-  setTimeout(function(){ w.print(); },800);
+  // Add print overlay div with both card sides
+  var existing = document.getElementById('printOverlay');
+  if(existing) existing.remove();
+
+  var theme = document.getElementById('cardWrap').className;
+  var overlay = document.createElement('div');
+  overlay.id = 'printOverlay';
+  overlay.style.cssText = 'display:none;';
+  overlay.className = theme;
+  overlay.innerHTML =
+    '<div class="po-card">' + document.getElementById('cFront').outerHTML + '</div>' +
+    '<div class="po-card">' + document.getElementById('cBack').outerHTML + '</div>';
+  document.body.appendChild(overlay);
+
+  window.print();
+  setTimeout(function(){ overlay.remove(); }, 2000);
 }
 </script>
 </body>
